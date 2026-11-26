@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { formatBDT, resolveImageUrl } from '@/lib/utils';
+import { getSiteSettings } from '@/lib/api';
 import { X, Trash2, Plus, Minus, ArrowRight, ShieldCheck, Truck } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -14,12 +15,33 @@ export const BagDrawer: React.FC = () => {
   const { user, openAuthModal } = useAuth();
   const router = useRouter();
 
+  const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState<number | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    getSiteSettings()
+      .then((res) => {
+        if (isMounted && res?.success && res.settings) {
+          setFreeDeliveryThreshold(res.settings.freeDeliveryThreshold ?? null);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
   if (!isCartOpen) return null;
 
-  // Free shipping in Dhaka over ৳5,000 threshold calculation
-  const freeShippingThreshold = 5000;
-  const progressPercent = Math.min(100, Math.round((subtotal / freeShippingThreshold) * 100));
-  const remainingForFreeShipping = Math.max(0, freeShippingThreshold - subtotal);
+  // Free shipping in Dhaka threshold calculation:
+  // If threshold is not set, empty, or <= 0, hide/render nothing (blank)
+  const hasThreshold = freeDeliveryThreshold !== null && freeDeliveryThreshold > 0;
+  const progressPercent = hasThreshold
+    ? Math.min(100, Math.round((subtotal / freeDeliveryThreshold) * 100))
+    : 0;
+  const remainingForFreeShipping = hasThreshold
+    ? Math.max(0, freeDeliveryThreshold - subtotal)
+    : 0;
 
   const handleCheckoutClick = () => {
     closeCart();
@@ -57,28 +79,30 @@ export const BagDrawer: React.FC = () => {
             </button>
           </div>
 
-          {/* Free Shipping Progress Indicator */}
-          <div className="bg-cream/70 px-5 py-3 border-b border-line text-xs">
-            <div className="flex items-center justify-between text-ink-800 mb-1.5">
-              <span className="flex items-center gap-1 font-medium">
-                <Truck className="w-3.5 h-3.5 text-gold-500" />
-                {remainingForFreeShipping === 0 ? (
-                  <span className="text-success font-semibold">You unlocked Free Delivery in Dhaka!</span>
-                ) : (
-                  <span>
-                    Add <strong>{formatBDT(remainingForFreeShipping)}</strong> more for Free Delivery in Dhaka
-                  </span>
-                )}
-              </span>
-              <span className="text-ink-500 font-mono text-[11px]">{progressPercent}%</span>
+          {/* Free Shipping Progress Indicator (Only rendered if threshold > 0) */}
+          {hasThreshold && (
+            <div className="bg-cream/70 px-5 py-3 border-b border-line text-xs">
+              <div className="flex items-center justify-between text-ink-800 mb-1.5">
+                <span className="flex items-center gap-1 font-medium">
+                  <Truck className="w-3.5 h-3.5 text-gold-500" />
+                  {remainingForFreeShipping === 0 ? (
+                    <span className="text-success font-semibold">You unlocked Free Delivery in Dhaka!</span>
+                  ) : (
+                    <span>
+                      Add <strong>{formatBDT(remainingForFreeShipping)}</strong> more for Free Delivery in Dhaka
+                    </span>
+                  )}
+                </span>
+                <span className="text-ink-500 font-mono text-[11px]">{progressPercent}%</span>
+              </div>
+              <div className="w-full bg-stone h-1.5 rounded-full overflow-hidden">
+                <div
+                  className="bg-gold-500 h-full transition-all duration-300"
+                  style={{ width: `${progressPercent}%` }}
+                />
+              </div>
             </div>
-            <div className="w-full bg-stone h-1.5 rounded-full overflow-hidden">
-              <div
-                className="bg-gold-500 h-full transition-all duration-300"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-          </div>
+          )}
 
           {/* Cart Items List */}
           <div className="flex-1 overflow-y-auto p-5 space-y-4">

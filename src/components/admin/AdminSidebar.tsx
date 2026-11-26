@@ -16,6 +16,7 @@ import {
   RotateCcw,
   Star,
   Scale,
+  BookOpen,
 } from 'lucide-react';
 import { useAuth } from '@/context/AuthContext';
 
@@ -27,6 +28,7 @@ export const AdminSidebar: React.FC = () => {
     { name: 'Analytics & Revenue', href: '/admin', icon: LayoutDashboard, exact: true },
     { name: 'Storefront CMS', href: '/admin/cms', icon: FileText },
     { name: 'Customer Reviews', href: '/admin/reviews', icon: Star },
+    { name: 'Editorial Blogs', href: '/admin/blogs', icon: BookOpen },
     { name: 'Legal Policies', href: '/admin/policies', icon: Scale },
     { name: 'Categories & Sub', href: '/admin/categories', icon: FolderTree },
     { name: 'Products & Discounts', href: '/admin/products', icon: Package },

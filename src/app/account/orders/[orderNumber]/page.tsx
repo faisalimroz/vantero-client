@@ -1,7 +1,6 @@
 import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { TopBar } from '@/components/storefront/TopBar';
 import { Navbar } from '@/components/storefront/Navbar';
 import { Footer } from '@/components/storefront/Footer';
 import { OrderTrackingTimeline } from '@/components/storefront/OrderTrackingTimeline';
@@ -9,6 +8,7 @@ import { OrderReturnSection } from '@/components/storefront/OrderReturnSection';
 import { Button } from '@/components/ui/Button';
 import { formatBDT, formatDateTime } from '@/lib/utils';
 import { ArrowLeft, MapPin, Package, ShieldCheck } from 'lucide-react';
+import { OrderInvoiceButton } from '@/components/invoice/OrderInvoiceButton';
 
 interface Props {
   params: { orderNumber: string };
@@ -34,7 +34,6 @@ export default async function OrderTrackingPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-paper flex flex-col">
-      <TopBar />
       <Navbar transparentOnTop={false} />
 
       <main className="flex-1 max-w-4xl mx-auto px-4 sm:px-6 py-10 w-full text-left space-y-8">
@@ -52,16 +51,21 @@ export default async function OrderTrackingPage({ params }: Props) {
         </div>
 
         {/* Order Status Header */}
-        <div>
-          <span className="text-xs uppercase tracking-overline text-gold-500 font-bold">
-            Live Package Tracking
-          </span>
-          <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink-900 mt-1">
-            Order #{order.orderNumber}
-          </h1>
-          <p className="text-xs text-ink-600 mt-0.5">
-            Payment Method: <strong>Cash on Delivery (COD)</strong> · Amount: <strong>{formatBDT(order.totalAmount)}</strong>
-          </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <span className="text-xs uppercase tracking-overline text-gold-500 font-bold">
+              Live Package Tracking
+            </span>
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink-900 mt-1">
+              Order #{order.orderNumber}
+            </h1>
+            <p className="text-xs text-ink-600 mt-0.5">
+              Payment Method: <strong>Cash on Delivery (COD)</strong> · Amount: <strong>{formatBDT(order.totalAmount)}</strong>
+            </p>
+          </div>
+          <div>
+            <OrderInvoiceButton order={order} variant="outline" size="sm" label="Print Official Invoice" />
+          </div>
         </div>
 
         {/* Interactive Visual Progress Timeline */}

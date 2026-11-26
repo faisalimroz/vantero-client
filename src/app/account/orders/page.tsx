@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { getMyOrders } from '@/lib/api';
 import { useAuth } from '@/context/AuthContext';
-import { TopBar } from '@/components/storefront/TopBar';
 import { Navbar } from '@/components/storefront/Navbar';
 import { Footer } from '@/components/storefront/Footer';
 import { Button } from '@/components/ui/Button';
@@ -29,7 +28,6 @@ export default function MyOrdersPage() {
   if (!authLoading && !user) {
     return (
       <div className="min-h-screen bg-paper flex flex-col">
-        <TopBar />
         <Navbar transparentOnTop={false} />
         <main className="flex-1 max-w-md mx-auto px-4 py-20 text-center space-y-4">
           <h1 className="text-2xl font-bold text-ink-900">Sign In to View Orders</h1>
@@ -62,7 +60,6 @@ export default function MyOrdersPage() {
 
   return (
     <div className="min-h-screen bg-paper flex flex-col">
-      <TopBar />
       <Navbar transparentOnTop={false} />
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full text-left">

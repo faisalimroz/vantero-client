@@ -1,7 +1,6 @@
 import React from 'react';
 import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
-import { TopBar } from '@/components/storefront/TopBar';
 import { Navbar } from '@/components/storefront/Navbar';
 import { Footer } from '@/components/storefront/Footer';
 import { ShopTheLookSection } from '@/components/storefront/ShopTheLookSection';
@@ -40,7 +39,6 @@ export default async function LookPage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-paper flex flex-col">
-      <TopBar />
       <Navbar transparentOnTop={false} />
 
       <main className="flex-1 py-10 w-full">

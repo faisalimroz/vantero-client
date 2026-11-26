@@ -37,7 +37,7 @@ export const Navbar: React.FC<NavbarProps> = ({ transparentOnTop = true }) => {
   }, []);
 
   const navLinks = [
-    { name: 'New In', href: '/shop?sort=newest' },
+    { name: 'Blogs', href: '/blogs' },
     { name: 'Sneakers', href: '/shop?category=sneakers' },
     { name: 'Clothing', href: '/shop?category=clothing' },
     { name: 'Fragrance', href: '/shop?category=fragrance' },

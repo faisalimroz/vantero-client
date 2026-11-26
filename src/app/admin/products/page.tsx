@@ -30,7 +30,8 @@ import {
   ChevronRight,
   UploadCloud,
   AlertCircle,
-  Loader2
+  Loader2,
+  Search,
 } from 'lucide-react';
 
 interface CategorySizePreset {
@@ -39,6 +40,13 @@ interface CategorySizePreset {
   sizes: string[];
   defaultColor: string;
 }
+
+const extractYouTubeVideoId = (url: string) => {
+  if (!url || typeof url !== 'string') return '';
+  const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+  const match = url.trim().match(regExp);
+  return match && match[1] ? match[1] : '';
+};
 
 const getCategorySizePresets = (catId: string, subId: string, categoriesList: any[]): CategorySizePreset => {
   const selectedCat = categoriesList.find((c) => c._id === catId);
@@ -163,12 +171,21 @@ export default function AdminProductsPage() {
   const [media, setMedia] = useState<Array<{ url: string; type: 'image' | 'video'; publicId?: string; order?: number }>>([]);
   const [mediaUploading, setMediaUploading] = useState(false);
   const [mediaError, setMediaError] = useState<string | null>(null);
+  const [youtubeUrl, setYoutubeUrl] = useState('');
   const [variants, setVariants] = useState<Array<{ size: string; color?: string; stock: number; sku?: string }>>([]);
   const [saving, setSaving] = useState(false);
 
-  const fetchData = () => {
+  // Search and Filtering State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [categoryFilter, setCategoryFilter] = useState('all');
+
+  const fetchData = (qStr = searchQuery, catId = categoryFilter) => {
     setLoading(true);
-    Promise.all([getAdminProducts({ limit: 50 }), getAdminCategories()])
+    const params: any = { limit: 100 };
+    if (qStr.trim()) params.q = qStr.trim();
+    if (catId !== 'all') params.category = catId;
+
+    Promise.all([getAdminProducts(params), getAdminCategories()])
       .then(([prodRes, catRes]) => {
         if (prodRes?.success) setProducts(prodRes.products || []);
         if (catRes?.success) setCategories(catRes.categories || []);
@@ -179,6 +196,28 @@ export default function AdminProductsPage() {
   useEffect(() => {
     fetchData();
   }, []);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    fetchData(searchQuery, categoryFilter);
+  };
+
+  const handleCategoryFilterChange = (catId: string) => {
+    setCategoryFilter(catId);
+    fetchData(searchQuery, catId);
+  };
+
+  const filteredProducts = products.filter((p) => {
+    const matchesCat = categoryFilter === 'all' || (p.category?._id || p.category) === categoryFilter;
+    if (!matchesCat) return false;
+    if (!searchQuery.trim()) return true;
+    const q = searchQuery.toLowerCase().trim();
+    const matchTitle = (p.title || '').toLowerCase().includes(q);
+    const matchSku = (p.sku || '').toLowerCase().includes(q);
+    const matchSlug = (p.slug || '').toLowerCase().includes(q);
+    const matchCategory = (p.category?.name || '').toLowerCase().includes(q);
+    return matchTitle || matchSku || matchSlug || matchCategory;
+  });
 
   const openAddModal = () => {
     setEditingId(null);
@@ -196,6 +235,7 @@ export default function AdminProductsPage() {
     setImages([]);
     setMedia([]);
     setMediaError(null);
+    setYoutubeUrl('');
 
     // Category-aware initial variants (e.g. 40 and 41 for footwear instead of mixed EU/XL)
     const preset = getCategorySizePresets(defaultCat, '', categories);
@@ -235,6 +275,7 @@ export default function AdminProductsPage() {
         }));
     setMedia(initialMedia.slice(0, 5));
     setMediaError(null);
+    setYoutubeUrl(p.youtubeUrl || '');
     setVariants(p.variants || []);
     setModalOpen(true);
   };
@@ -375,6 +416,7 @@ export default function AdminProductsPage() {
           discountValue: Number(discountValue),
         },
         isFeatured,
+        youtubeUrl: youtubeUrl.trim(),
         media: media.slice(0, 5),
         images: imagesPayload,
         variants,
@@ -423,10 +465,40 @@ export default function AdminProductsPage() {
       />
 
       <div className="p-6 sm:p-8 space-y-6 flex-1 text-left">
+        {/* Search & Filter Bar */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 bg-white p-4 border border-line rounded-sm">
+          <form onSubmit={handleSearchSubmit} className="flex-1 relative">
+            <Search className="w-4 h-4 absolute left-3 top-2.5 text-ink-400" />
+            <input
+              type="text"
+              placeholder="Search inventory by Product Title, SKU (e.g. VT-1092), or Category..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-9 pr-4 py-2 border border-line rounded-sm text-xs bg-paper focus:outline-none"
+            />
+          </form>
+
+          <div className="flex items-center space-x-2">
+            <span className="text-xs text-ink-500 whitespace-nowrap">Category:</span>
+            <select
+              value={categoryFilter}
+              onChange={(e) => handleCategoryFilterChange(e.target.value)}
+              className="px-3 py-2 bg-paper border border-line rounded-sm text-xs font-semibold text-ink-900 focus:outline-none"
+            >
+              <option value="all">All Categories</option>
+              {categories.map((c) => (
+                <option key={c._id} value={c._id}>
+                  {c.name}
+                </option>
+              ))}
+            </select>
+          </div>
+        </div>
+
         <div className="bg-white border border-line rounded-sm overflow-hidden shadow-card">
           <div className="p-4 border-b border-line flex justify-between items-center bg-cream/30">
             <h3 className="text-xs font-bold uppercase tracking-wider text-ink-900">
-              Active Inventory ({products.length} products)
+              Active Inventory ({filteredProducts.length} of {products.length} products)
             </h3>
           </div>
 
@@ -444,7 +516,14 @@ export default function AdminProductsPage() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-line/60">
-                {products.map((p) => {
+                {filteredProducts.length === 0 && !loading && (
+                  <tr>
+                    <td colSpan={7} className="py-8 text-center text-xs text-ink-400">
+                      No products matching &quot;{searchQuery}&quot; found.
+                    </td>
+                  </tr>
+                )}
+                {filteredProducts.map((p) => {
                   const stock = p.variants?.reduce((acc: number, v: any) => acc + (v.stock || 0), 0) || 0;
                   const hasDiscount = p.discount && p.discount.discountType !== 'none';
                   return (
@@ -803,6 +882,52 @@ export default function AdminProductsPage() {
                     <span>{mediaError}</span>
                   </div>
                 )}
+              </div>
+
+              {/* PRODUCT YOUTUBE VIDEO LINK (SHOWCASE & FIT EMBED) */}
+              <div className="pt-4 border-t border-line space-y-3 text-left">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                  <h4 className="text-xs font-bold uppercase tracking-wider text-ink-900 flex items-center gap-1.5">
+                    <Video className="w-4 h-4 text-rose-600" />
+                    YouTube Video Link (Product Showcase & Fit)
+                  </h4>
+                  <span className="text-[11px] text-ink-500">
+                    Supports standard watch URLs, youtu.be, and YouTube Shorts
+                  </span>
+                </div>
+
+                <Input
+                  placeholder="https://www.youtube.com/watch?v=... or https://youtu.be/... or shorts"
+                  value={youtubeUrl}
+                  onChange={(e) => setYoutubeUrl(e.target.value)}
+                />
+
+                {extractYouTubeVideoId(youtubeUrl) ? (
+                  <div className="p-3 bg-cream/50 rounded-sm border border-line flex flex-col sm:flex-row items-start sm:items-center gap-3">
+                    <div className="relative aspect-video w-36 bg-black rounded-xs overflow-hidden shrink-0 border border-line shadow-xs">
+                      <iframe
+                        src={`https://www.youtube-nocookie.com/embed/${extractYouTubeVideoId(youtubeUrl)}`}
+                        title="YouTube Video Preview"
+                        className="w-full h-full border-0"
+                      />
+                    </div>
+                    <div className="text-xs">
+                      <p className="font-semibold text-ink-900 flex items-center gap-1">
+                        <Check className="w-3.5 h-3.5 text-emerald-600" /> Valid YouTube Video Linked
+                      </p>
+                      <p className="text-[11px] text-ink-500 mt-0.5 font-mono">
+                        Video ID: {extractYouTubeVideoId(youtubeUrl)}
+                      </p>
+                      <p className="text-[11px] text-ink-600 mt-1">
+                        This video will appear with a red YouTube play badge in the PDP gallery and as an embedded showcase player.
+                      </p>
+                    </div>
+                  </div>
+                ) : youtubeUrl ? (
+                  <p className="text-[11px] text-rose-600 font-mono">
+                    Please enter a valid YouTube video or shorts URL.
+                  </p>
+                ) : null}
               </div>
 
               {/* CATEGORY-AWARE SIZES & INVENTORY STOCK (BANGLADESH MARKET ALIGNED) */}

@@ -40,7 +40,7 @@ All records are safeguarded with industry-standard encryption at rest and in tra
   };
 
   return (
-    <div className="min-h-screen bg-paper flex flex-col">
+    <div className="min-h-screen bg-paper flex flex-col mt-12">
       <Navbar transparentOnTop={false} />
       <main className="flex-1">
         <PolicyView policy={policy || fallback} />

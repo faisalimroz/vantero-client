@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { formatBDT, formatDateTime } from '@/lib/utils';
 import { Search, Eye, Edit3, Truck, X, CheckCircle2 } from 'lucide-react';
+import { OrderInvoiceButton } from '@/components/invoice/OrderInvoiceButton';
 
 export default function AdminOrdersPage() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -165,15 +166,24 @@ export default function AdminOrdersPage() {
                       {getStatusBadge(o.orderStatus)}
                     </td>
                     <td className="py-3.5 px-4 text-right">
-                      <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => openUpdateModal(o)}
-                        className="text-xs inline-flex items-center space-x-1"
-                      >
-                        <Edit3 className="w-3.5 h-3.5" />
-                        <span>Update Status</span>
-                      </Button>
+                      <div className="flex items-center justify-end space-x-2">
+                        <OrderInvoiceButton
+                          order={o}
+                          variant="ghost"
+                          size="sm"
+                          label="Invoice"
+                          className="text-xs px-2.5 py-1"
+                        />
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => openUpdateModal(o)}
+                          className="text-xs inline-flex items-center space-x-1"
+                        >
+                          <Edit3 className="w-3.5 h-3.5" />
+                          <span>Status</span>
+                        </Button>
+                      </div>
                     </td>
                   </tr>
                 ))}
@@ -196,9 +206,18 @@ export default function AdminOrdersPage() {
                   Update Order #{selectedOrder.orderNumber}
                 </h3>
               </div>
-              <button onClick={() => setSelectedOrder(null)} className="text-ink-500 hover:text-ink-900">
-                <X className="w-5 h-5" />
-              </button>
+              <div className="flex items-center space-x-2">
+                <OrderInvoiceButton
+                  order={selectedOrder}
+                  variant="outline"
+                  size="sm"
+                  label="View Invoice"
+                  className="text-xs"
+                />
+                <button onClick={() => setSelectedOrder(null)} className="text-ink-500 hover:text-ink-900 p-1">
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
             </div>
 
             {/* Ordered Items with Size & Color */}

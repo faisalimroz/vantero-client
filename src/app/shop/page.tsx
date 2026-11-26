@@ -3,14 +3,14 @@
 import React, { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { getProducts, getCategories } from '@/lib/api';
-import { TopBar } from '@/components/storefront/TopBar';
 import { Navbar } from '@/components/storefront/Navbar';
 import { Footer } from '@/components/storefront/Footer';
 import { ProductCard } from '@/components/storefront/ProductCard';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Button } from '@/components/ui/Button';
 import { formatBDT } from '@/lib/utils';
-import { Filter, X, ChevronDown, Check, SlidersHorizontal, RotateCcw } from 'lucide-react';
+import { PriceRangeSlider } from '@/components/storefront/PriceRangeSlider';
+import { X, SlidersHorizontal, RotateCcw } from 'lucide-react';
 
 function CatalogContent() {
   const router = useRouter();
@@ -31,14 +31,20 @@ function CatalogContent() {
 
   const [products, setProducts] = useState<any[]>([]);
   const [categories, setCategories] = useState<any[]>([]);
-  const [facets, setFacets] = useState<{ sizes: string[]; colors: string[] }>({ sizes: [], colors: [] });
+  const [facets, setFacets] = useState<{
+    sizes: string[];
+    colors: string[];
+    minPrice?: number;
+    maxPrice?: number;
+  }>({
+    sizes: [],
+    colors: [],
+    minPrice: 0,
+    maxPrice: 50000,
+  });
   const [pagination, setPagination] = useState({ total: 0, pages: 1, page: 1 });
   const [loading, setLoading] = useState(true);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
-
-  // Price input local states
-  const [localMinPrice, setLocalMinPrice] = useState(minPriceParam);
-  const [localMaxPrice, setLocalMaxPrice] = useState(maxPriceParam);
 
   // Load Categories on mount
   useEffect(() => {
@@ -137,8 +143,7 @@ function CatalogContent() {
   ].filter(Boolean).length;
 
   return (
-    <div className="min-h-screen bg-paper flex flex-col mt-4">
-      <TopBar />
+    <div className="min-h-screen bg-paper flex flex-col mt-12">
       <Navbar transparentOnTop={false} />
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
@@ -259,7 +264,7 @@ function CatalogContent() {
         {/* Main Grid: Sidebar Filters + Products */}
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8 items-start">
           {/* Desktop Filter Sidebar */}
-          <aside className="hidden lg:block space-y-6 text-left p-5 bg-white border border-line rounded-sm">
+          <aside className="hidden lg:block min-w-0 space-y-6 text-left p-5 bg-white border border-line rounded-sm">
             {/* Categories */}
             <div>
               <h3 className="text-xs font-bold uppercase tracking-wider text-ink-900 mb-3">
@@ -286,7 +291,6 @@ function CatalogContent() {
                     >
                       <span>{c.name}</span>
                     </button>
-                    {/* Subcategories if category selected */}
                     {categoryParam === c.slug && c.subCategories && c.subCategories.length > 0 && (
                       <div className="pl-3 mt-1 space-y-1 border-l border-line ml-2">
                         {c.subCategories.map((sub: any) => (
@@ -314,7 +318,6 @@ function CatalogContent() {
               <h3 className="text-xs font-bold uppercase tracking-wider text-ink-900 mb-2">
                 Special Offers
               </h3>
-              
 
               <label className="flex items-center space-x-2 text-xs text-ink-800 cursor-pointer">
                 <input
@@ -360,39 +363,24 @@ function CatalogContent() {
               </div>
             )}
 
-            {/* Price Filter */}
+            {/* Price Filter with Dual Range Slider & Manual Inputs */}
             <div className="pt-4 border-t border-line">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-ink-900 mb-2.5">
+              <h3 className="text-xs font-bold uppercase tracking-wider text-ink-900 mb-3">
                 Price Range (৳)
               </h3>
-              <div className="flex items-center space-x-2 text-xs">
-                <input
-                  type="number"
-                  placeholder="Min"
-                  value={localMinPrice}
-                  onChange={(e) => setLocalMinPrice(e.target.value)}
-                  className="w-full px-2.5 py-1.5 border border-line rounded-sm text-xs font-mono"
-                />
-                <span className="text-ink-400">-</span>
-                <input
-                  type="number"
-                  placeholder="Max"
-                  value={localMaxPrice}
-                  onChange={(e) => setLocalMaxPrice(e.target.value)}
-                  className="w-full px-2.5 py-1.5 border border-line rounded-sm text-xs font-mono"
-                />
-              </div>
-              <button
-                onClick={() => updateQuery({ minPrice: localMinPrice, maxPrice: localMaxPrice })}
-                className="mt-2.5 w-full py-1.5 bg-stone hover:bg-line text-xs font-semibold rounded-sm text-ink-900 transition-colors"
-              >
-                Apply Range
-              </button>
+              <PriceRangeSlider
+                min={facets.minPrice ?? 0}
+                max={facets.maxPrice ?? 50000}
+                step={500}
+                currentMin={minPriceParam ? Number(minPriceParam) : undefined}
+                currentMax={maxPriceParam ? Number(maxPriceParam) : undefined}
+                onApply={({ min, max }) => updateQuery({ minPrice: min, maxPrice: max })}
+              />
             </div>
           </aside>
 
           {/* Products Grid Area */}
-          <div className="lg:col-span-3">
+          <div className="lg:col-span-3 min-w-0">
             {loading ? (
               <div className="grid grid-cols-2 md:grid-cols-3 gap-4 sm:gap-6">
                 {[...Array(6)].map((_, i) => (
@@ -406,7 +394,9 @@ function CatalogContent() {
             ) : products.length === 0 ? (
               <div className="p-12 text-center bg-white border border-line rounded-sm space-y-3">
                 <p className="text-base font-semibold text-ink-900">No products match your filters</p>
-                <p className="text-xs text-ink-500">Try adjusting your price range, clearing tags, or browsing another category.</p>
+                <p className="text-xs text-ink-500">
+                  Try adjusting your price range, clearing tags, or browsing another category.
+                </p>
                 <Button variant="outline" size="md" onClick={clearAllFilters} className="mt-2">
                   Clear All Filters
                 </Button>
@@ -431,7 +421,9 @@ function CatalogContent() {
                   Previous
                 </Button>
                 <div className="flex items-center space-x-1 px-3 text-xs font-mono text-ink-600">
-                  <span>Page {pagination.page} of {pagination.pages}</span>
+                  <span>
+                    Page {pagination.page} of {pagination.pages}
+                  </span>
                 </div>
                 <Button
                   variant="outline"
@@ -445,6 +437,127 @@ function CatalogContent() {
             )}
           </div>
         </div>
+
+        {/* Mobile Filter Drawer */}
+        {mobileFilterOpen && (
+          <div className="fixed inset-0 z-50 overflow-hidden lg:hidden animate-fadeIn">
+            <div
+              className="absolute inset-0 bg-ink-900/60 backdrop-blur-xs transition-opacity"
+              onClick={() => setMobileFilterOpen(false)}
+            />
+            <div className="fixed inset-y-0 right-0 max-w-full flex pl-10">
+              <div className="w-screen max-w-xs sm:max-w-sm bg-paper border-l border-line p-5 overflow-y-auto space-y-6 text-left shadow-2xl flex flex-col justify-between">
+                <div className="space-y-6">
+                  <div className="flex items-center justify-between pb-3 border-b border-line">
+                    <h3 className="text-sm font-bold uppercase tracking-wider text-ink-900 flex items-center gap-2">
+                      <SlidersHorizontal className="w-4 h-4 text-gold-500" />
+                      Filters {activeFiltersCount > 0 && `(${activeFiltersCount})`}
+                    </h3>
+                    <button
+                      onClick={() => setMobileFilterOpen(false)}
+                      className="p-1.5 text-ink-500 hover:text-ink-900"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Categories */}
+                  <div>
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-ink-900 mb-2">
+                      Categories
+                    </h4>
+                    <div className="space-y-1 text-xs">
+                      <button
+                        onClick={() => updateQuery({ category: '', subCategory: '' })}
+                        className={`w-full text-left py-1.5 px-2 rounded-xs transition-colors flex justify-between ${
+                          !categoryParam ? 'bg-ink-900 text-white font-semibold' : 'text-ink-700 hover:bg-cream'
+                        }`}
+                      >
+                        <span>All Categories</span>
+                      </button>
+                      {categories.map((c) => (
+                        <button
+                          key={c._id}
+                          onClick={() => updateQuery({ category: c.slug, subCategory: '' })}
+                          className={`w-full text-left py-1.5 px-2 rounded-xs transition-colors flex justify-between ${
+                            categoryParam === c.slug ? 'bg-ink-900 text-white font-semibold' : 'text-ink-700 hover:bg-cream'
+                          }`}
+                        >
+                          <span>{c.name}</span>
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+
+                  {/* Price Slider & Manual Inputs in Mobile Drawer */}
+                  <div className="pt-4 border-t border-line">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-ink-900 mb-2">
+                      Price Range (৳)
+                    </h4>
+                    <PriceRangeSlider
+                      min={facets.minPrice ?? 0}
+                      max={facets.maxPrice ?? 50000}
+                      step={500}
+                      currentMin={minPriceParam ? Number(minPriceParam) : undefined}
+                      currentMax={maxPriceParam ? Number(maxPriceParam) : undefined}
+                      onApply={({ min, max }) => {
+                        updateQuery({ minPrice: min, maxPrice: max });
+                        setMobileFilterOpen(false);
+                      }}
+                    />
+                  </div>
+
+                  {/* Special Offers */}
+                  <div className="pt-4 border-t border-line space-y-2">
+                    <h4 className="text-xs font-bold uppercase tracking-wider text-ink-900 mb-2">
+                      Special Offers
+                    </h4>
+                    <label className="flex items-center space-x-2 text-xs text-ink-800 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={inStockParam}
+                        onChange={(e) => updateQuery({ inStock: e.target.checked })}
+                        className="rounded-xs border-line text-ink-900"
+                      />
+                      <span>In Stock Only</span>
+                    </label>
+                    <label className="flex items-center space-x-2 text-xs text-ink-800 cursor-pointer">
+                      <input
+                        type="checkbox"
+                        checked={discountOnlyParam}
+                        onChange={(e) => updateQuery({ discountOnly: e.target.checked })}
+                        className="rounded-xs border-line text-ink-900"
+                      />
+                      <span>Discounted Pieces Only</span>
+                    </label>
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-line flex gap-2">
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      clearAllFilters();
+                      setMobileFilterOpen(false);
+                    }}
+                    className="w-1/2"
+                  >
+                    Reset All
+                  </Button>
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => setMobileFilterOpen(false)}
+                    className="w-1/2"
+                  >
+                    Done
+                  </Button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </main>
 
       <Footer />

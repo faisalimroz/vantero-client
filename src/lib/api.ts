@@ -76,6 +76,7 @@ export const createOrder = async (orderData: {
     title?: string;
     image?: string;
   }>;
+  deliveryArea?: 'inside_dhaka' | 'outside_dhaka';
   shippingAddress: {
     recipientName: string;
     phone: string;
@@ -358,5 +359,153 @@ export const getPolicyByKey = async (key: string) => {
 // Admin: Update policy
 export const updatePolicy = async (key: string, data: any) => {
   const res = await api.put(`/policies/${key}`, data);
+  return res.data;
+};
+
+/* =========================================================
+   SITE SETTINGS (SHIPPING & FREE DELIVERY THRESHOLD)
+   ========================================================= */
+
+export interface SiteSettingsData {
+  freeDeliveryThreshold: number;
+  insideDhakaCharge: number;
+  outsideDhakaCharge: number;
+  freeDeliveryMessage: string;
+}
+
+// Public: Get delivery & free shipping settings
+export const getSiteSettings = async (): Promise<{ success: boolean; settings: SiteSettingsData }> => {
+  const res = await api.get('/settings');
+  return res.data;
+};
+
+// Admin: Update delivery & free shipping settings
+export const updateSiteSettings = async (data: Partial<SiteSettingsData>): Promise<{ success: boolean; settings: SiteSettingsData; message: string }> => {
+  const res = await api.put('/settings', data);
+  return res.data;
+};
+
+/* =========================================================
+   ADMIN NOTIFICATIONS (ORDERS & RETURNS)
+   ========================================================= */
+
+export interface AdminNotification {
+  _id: string;
+  type: 'NEW_ORDER' | 'RETURN_DELIVERY';
+  title: string;
+  message: string;
+  orderId?: string;
+  orderNumber?: string;
+  isRead: boolean;
+  createdAt: string;
+}
+
+export const getAdminNotifications = async (params?: { limit?: number; unreadOnly?: boolean }): Promise<{ success: boolean; notifications: AdminNotification[]; unreadCount: number }> => {
+  const res = await api.get('/admin/notifications', { params });
+  return res.data;
+};
+
+export const markNotificationRead = async (id: string): Promise<{ success: boolean; notification: AdminNotification; unreadCount: number }> => {
+  const res = await api.patch(`/admin/notifications/${id}/read`);
+  return res.data;
+};
+
+export const markAllNotificationsRead = async (): Promise<{ success: boolean; message: string; unreadCount: number }> => {
+  const res = await api.patch('/admin/notifications/read-all');
+  return res.data;
+};
+
+export const markAdminNotificationRead = markNotificationRead;
+export const markAllAdminNotificationsRead = markAllNotificationsRead;
+
+/* =========================================================
+   BLOGS & EDITORIAL ARTICLES
+   ========================================================= */
+
+export interface BlogItem {
+  _id: string;
+  title: string;
+  slug: string;
+  excerpt: string;
+  content: string;
+  coverImage?: string;
+  author: string;
+  tags: string[];
+  metaTitle?: string;
+  metaDescription?: string;
+  isPublished: boolean;
+  publishedAt?: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export const getBlogs = async (params: { tag?: string; page?: number; limit?: number } = {}) => {
+  const res = await api.get('/blogs', { params });
+  return res.data;
+};
+
+export const getBlogBySlug = async (slug: string) => {
+  const res = await api.get(`/blogs/${slug}`);
+  return res.data;
+};
+
+export const getAdminBlogs = async (params: { q?: string } = {}) => {
+  const res = await api.get('/blogs/admin/all', { params });
+  return res.data;
+};
+
+export const createAdminBlog = async (data: Partial<BlogItem>) => {
+  const res = await api.post('/blogs', data);
+  return res.data;
+};
+
+export const updateAdminBlog = async (id: string, data: Partial<BlogItem>) => {
+  const res = await api.put(`/blogs/${id}`, data);
+  return res.data;
+};
+
+export const deleteAdminBlog = async (id: string) => {
+  const res = await api.delete(`/blogs/${id}`);
+  return res.data;
+};
+
+/* =========================================================
+   FAQS (FREQUENTLY ASKED QUESTIONS)
+   ========================================================= */
+
+export interface FAQItem {
+  _id: string;
+  question: string;
+  answer: string;
+  category?: string;
+  order: number;
+  isActive: boolean;
+  createdAt?: string;
+}
+
+export const getFAQs = async (): Promise<{ success: boolean; faqs: FAQItem[] }> => {
+  const res = await api.get('/faqs');
+  return res.data;
+};
+
+export const getPublicFAQs = getFAQs;
+
+export const getAdminFAQs = async (): Promise<{ success: boolean; faqs: FAQItem[]; total: number }> => {
+  const res = await api.get('/faqs/admin');
+  return res.data;
+};
+
+export const createAdminFAQ = async (data: Partial<FAQItem>) => {
+  const res = await api.post('/faqs', data);
+  return res.data;
+};
+
+export const updateAdminFAQ = async (id: string, data: Partial<FAQItem>) => {
+  const res = await api.put(`/faqs/${id}`, data);
+  return res.data;
+};
+
+export const deleteAdminFAQ = async (id: string) => {
+  const res = await api.delete(`/faqs/${id}`);
   return res.data;
 };

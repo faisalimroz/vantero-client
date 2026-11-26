@@ -4,14 +4,13 @@ import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
-import { createOrder } from '@/lib/api';
-import { TopBar } from '@/components/storefront/TopBar';
+import { createOrder, getSiteSettings } from '@/lib/api';
 import { Navbar } from '@/components/storefront/Navbar';
 import { Footer } from '@/components/storefront/Footer';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { formatBDT, resolveImageUrl } from '@/lib/utils';
-import { ShieldCheck, Truck, CreditCard, Lock, Check, ArrowRight } from 'lucide-react';
+import { ShieldCheck, Truck, CreditCard, Lock, Check, ArrowRight, Building2 } from 'lucide-react';
 
 const BD_DISTRICTS = [
   'Dhaka',
@@ -44,6 +43,28 @@ export default function CheckoutPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const [deliveryArea, setDeliveryArea] = useState<'inside_dhaka' | 'outside_dhaka'>('inside_dhaka');
+  const [shippingSettings, setShippingSettings] = useState({
+    insideDhakaCharge: 100,
+    outsideDhakaCharge: 150,
+    freeDeliveryThreshold: 5000,
+  });
+
+  // Fetch admin-configured shipping settings
+  useEffect(() => {
+    getSiteSettings()
+      .then((res) => {
+        if (res?.success && res.settings) {
+          setShippingSettings({
+            insideDhakaCharge: res.settings.insideDhakaCharge ?? 100,
+            outsideDhakaCharge: res.settings.outsideDhakaCharge ?? 150,
+            freeDeliveryThreshold: res.settings.freeDeliveryThreshold ?? 5000,
+          });
+        }
+      })
+      .catch(() => {});
+  }, []);
+
   // Pre-fill from user profile or saved address
   useEffect(() => {
     if (user) {
@@ -53,8 +74,10 @@ export default function CheckoutPage() {
         setPhone(defaultAddr.phone || user.phone || '');
         setStreetAddress(defaultAddr.streetAddress || '');
         setCity(defaultAddr.city || '');
-        setDistrict(defaultAddr.district || 'Dhaka');
+        const dist = defaultAddr.district || 'Dhaka';
+        setDistrict(dist);
         setPostalCode(defaultAddr.postalCode || '');
+        setDeliveryArea(dist.toLowerCase().includes('dhaka') ? 'inside_dhaka' : 'outside_dhaka');
       } else {
         setRecipientName(user.name || '');
         setPhone(user.phone || '');
@@ -62,11 +85,14 @@ export default function CheckoutPage() {
     }
   }, [user]);
 
-  // Delivery fee calculation
-  const isDhaka = district.toLowerCase().includes('dhaka') || city.toLowerCase().includes('dhaka');
-  let deliveryFee = isDhaka ? 80 : 150;
-  if (isDhaka && subtotal >= 5000) {
-    deliveryFee = 0; // Free delivery in Dhaka over ৳5,000 per Figma promise
+  // Delivery fee calculation based on selected area & threshold
+  const isInsideDhaka = deliveryArea === 'inside_dhaka';
+  const hasFreeThreshold = shippingSettings.freeDeliveryThreshold > 0;
+  const isFreeDelivery = isInsideDhaka && hasFreeThreshold && subtotal >= shippingSettings.freeDeliveryThreshold;
+
+  let deliveryFee = isInsideDhaka ? shippingSettings.insideDhakaCharge : shippingSettings.outsideDhakaCharge;
+  if (isFreeDelivery) {
+    deliveryFee = 0;
   }
   const totalAmount = subtotal + deliveryFee;
 
@@ -74,7 +100,6 @@ export default function CheckoutPage() {
   if (!authLoading && !user) {
     return (
       <div className="min-h-screen bg-paper flex flex-col">
-        <TopBar />
         <Navbar transparentOnTop={false} />
         <main className="flex-1 max-w-lg mx-auto px-4 py-20 flex flex-col items-center justify-center text-center">
           <div className="w-16 h-16 bg-cream rounded-full flex items-center justify-center text-ink-900 mb-4 border border-line">
@@ -128,6 +153,7 @@ export default function CheckoutPage() {
           color: item.color,
           quantity: item.quantity,
         })),
+        deliveryArea,
         shippingAddress: {
           recipientName: recipientName.trim(),
           phone: phone.trim(),
@@ -154,11 +180,10 @@ export default function CheckoutPage() {
   };
 
   return (
-    <div className="min-h-screen bg-paper flex flex-col">
-      <TopBar />
+    <div className="min-h-screen bg-paper flex flex-col mt-12">
       <Navbar transparentOnTop={false} />
 
-      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full text-left">
+      <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-12 py-10 w-full text-left">
         <div className="border-b border-line pb-4 mb-8">
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink-900">
             Cash on Delivery Checkout
@@ -180,7 +205,7 @@ export default function CheckoutPage() {
             {/* Address Form Card */}
             <div className="bg-white border border-line rounded-sm p-6 space-y-4">
               <h2 className="text-xs font-bold uppercase tracking-wider text-ink-900 border-b border-line pb-2.5">
-                1. Delivery Destination (Bangladesh)
+            Delivery Information
               </h2>
 
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -201,6 +226,98 @@ export default function CheckoutPage() {
                 />
               </div>
 
+              {/* Required Delivery Area * Selector Cards */}
+              <div className="space-y-2 pt-1 text-left">
+                <label className="block text-xs font-semibold uppercase tracking-wider text-ink-900">
+                  Delivery Area <span className="text-rose-500">*</span>
+                </label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                  {/* Card 1: Inside Dhaka */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeliveryArea('inside_dhaka');
+                      setDistrict('Dhaka');
+                    }}
+                    className={`relative p-4 rounded-sm transition-all text-left flex items-start justify-between ${
+                      deliveryArea === 'inside_dhaka'
+                        ? 'border-2 border-ink-900 bg-paper shadow-sm'
+                        : 'border border-[#E5E7EB] bg-white hover:border-ink-300'
+                    }`}
+                  >
+                    <div className="flex items-start space-x-3">
+                      <div
+                        className={`w-9 h-9 rounded-xs flex items-center justify-center shrink-0 transition-colors ${
+                          deliveryArea === 'inside_dhaka'
+                            ? 'bg-ink-900 text-white'
+                            : 'bg-stone text-ink-600'
+                        }`}
+                      >
+                        <Building2 className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-ink-900">Inside Dhaka</h4>
+                        <p className="text-[11px] text-ink-500 mt-0.5">2-3 Days Home Delivery</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end justify-between self-stretch">
+                      <span className="text-xs font-mono font-bold text-ink-900">
+                        {isFreeDelivery ? (
+                          <span className="text-emerald-600 font-semibold uppercase text-[11px]">FREE</span>
+                        ) : (
+                          formatBDT(shippingSettings.insideDhakaCharge)
+                        )}
+                      </span>
+                      {deliveryArea === 'inside_dhaka' && (
+                        <div className="w-4 h-4 rounded-full bg-ink-900 text-white flex items-center justify-center mt-2">
+                          <Check className="w-2.5 h-2.5" />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+
+                  {/* Card 2: Outside Dhaka */}
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setDeliveryArea('outside_dhaka');
+                      if (district === 'Dhaka') setDistrict('Chattogram (Chittagong)');
+                    }}
+                    className={`relative p-4 rounded-sm transition-all text-left flex items-start justify-between ${
+                      deliveryArea === 'outside_dhaka'
+                        ? 'border-2 border-ink-900 bg-paper shadow-sm'
+                        : 'border border-[#E5E7EB] bg-white hover:border-ink-300'
+                    }`}
+                  >
+                    <div className="flex items-start space-x-3">
+                      <div
+                        className={`w-9 h-9 rounded-xs flex items-center justify-center shrink-0 transition-colors ${
+                          deliveryArea === 'outside_dhaka'
+                            ? 'bg-ink-900 text-white'
+                            : 'bg-stone text-ink-600'
+                        }`}
+                      >
+                        <Truck className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h4 className="text-xs font-bold text-ink-900">Outside Dhaka</h4>
+                        <p className="text-[11px] text-ink-500 mt-0.5">3-5 Days Home Delivery</p>
+                      </div>
+                    </div>
+                    <div className="flex flex-col items-end justify-between self-stretch">
+                      <span className="text-xs font-mono font-bold text-ink-900">
+                        {formatBDT(shippingSettings.outsideDhakaCharge)}
+                      </span>
+                      {deliveryArea === 'outside_dhaka' && (
+                        <div className="w-4 h-4 rounded-full bg-ink-900 text-white flex items-center justify-center mt-2">
+                          <Check className="w-2.5 h-2.5" />
+                        </div>
+                      )}
+                    </div>
+                  </button>
+                </div>
+              </div>
+
               <Input
                 label="Street Address / House / Flat / Road"
                 placeholder="House 12, Road 5, Block C"
@@ -216,7 +333,15 @@ export default function CheckoutPage() {
                   </label>
                   <select
                     value={district}
-                    onChange={(e) => setDistrict(e.target.value)}
+                    onChange={(e) => {
+                      const val = e.target.value;
+                      setDistrict(val);
+                      if (val.toLowerCase().includes('dhaka')) {
+                        setDeliveryArea('inside_dhaka');
+                      } else {
+                        setDeliveryArea('outside_dhaka');
+                      }
+                    }}
                     className="w-full px-3 py-2.5 bg-white border border-line rounded-sm text-sm text-ink-900 focus:outline-none focus:border-ink-900"
                     required
                   >
@@ -261,7 +386,7 @@ export default function CheckoutPage() {
             {/* Strict Payment Override: Cash on Delivery Only */}
             <div className="bg-white border border-line rounded-sm p-6 space-y-4">
               <h2 className="text-xs font-bold uppercase tracking-wider text-ink-900 border-b border-line pb-2.5">
-                2. Payment Method
+             Payment Method
               </h2>
 
               <div className="p-4 bg-cream border-2 border-ink-900 rounded-sm flex items-start space-x-3.5">
@@ -275,7 +400,7 @@ export default function CheckoutPage() {
                   <p className="text-xs text-ink-600 leading-relaxed">
                     Pay in cash directly to our courier upon doorstep delivery and parcel inspection. No online prepayment, cards, or mobile wallets required.
                   </p>
-                  <span className="inline-block text-[10px] uppercase font-mono font-bold text-gold-500 tracking-wider">
+                  <span className="inline-block text-[10px] uppercase font-mono font-bold text-gold-600 tracking-wider">
                     Official Vantero COD Guarantee
                   </span>
                 </div>
@@ -319,11 +444,13 @@ export default function CheckoutPage() {
 
                 <div className="flex justify-between items-center">
                   <span>
-                    Delivery ({isDhaka ? 'Dhaka Next-Day' : 'Outside Dhaka'})
+                    Delivery ({isInsideDhaka ? 'Inside Dhaka' : 'Outside Dhaka'})
                   </span>
                   <span className="font-mono font-semibold text-ink-900">
                     {deliveryFee === 0 ? (
-                      <span className="text-success font-bold">FREE (over ৳5,000)</span>
+                      <span className="text-emerald-600 font-bold">
+                        FREE ({shippingSettings.freeDeliveryThreshold > 0 ? `over ৳${shippingSettings.freeDeliveryThreshold.toLocaleString()}` : 'unlocked'})
+                      </span>
                     ) : (
                       formatBDT(deliveryFee)
                     )}

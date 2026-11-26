@@ -177,7 +177,7 @@ export const PolicyView: React.FC<PolicyViewProps> = ({ policy }) => {
               <Phone className="w-3.5 h-3.5 text-gold-500" /> +880 1674990904
             </span>
             <span className="flex items-center gap-1.5">
-              <Mail className="w-3.5 h-3.5 text-gold-500" /> info@vantero.com
+              <Mail className="w-3.5 h-3.5 text-gold-500" /> info@vanterobd.com
             </span>
           </div>
         </div>

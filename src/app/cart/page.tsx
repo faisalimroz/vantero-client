@@ -4,7 +4,6 @@ import React from 'react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
 import { useAuth } from '@/context/AuthContext';
-import { TopBar } from '@/components/storefront/TopBar';
 import { Navbar } from '@/components/storefront/Navbar';
 import { Footer } from '@/components/storefront/Footer';
 import { Button } from '@/components/ui/Button';
@@ -30,8 +29,7 @@ export default function CartPage() {
   };
 
   return (
-    <div className="min-h-screen bg-paper flex flex-col">
-      <TopBar />
+    <div className="min-h-screen bg-paper flex flex-col mt-12">
       <Navbar transparentOnTop={false} />
 
       <main className="flex-1 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 w-full text-left">

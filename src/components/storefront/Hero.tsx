@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/Button';
-import { ArrowRight, ChevronLeft, ChevronRight, Pause, Play } from 'lucide-react';
+import { ArrowRight, ChevronLeft, ChevronRight } from 'lucide-react';
 import { resolveImageUrl } from '@/lib/utils';
 
 export interface HeroSlideItem {
@@ -16,7 +16,9 @@ export interface HeroSlideItem {
   ctaLink?: string;
   secondaryCtaText?: string;
   secondaryCtaLink?: string;
-  image: {
+  mediaType?: 'image' | 'video';
+  mediaUrl?: string;
+  image?: {
     url: string;
     publicId?: string;
     alt?: string;
@@ -53,6 +55,8 @@ const DEFAULT_SLIDES: HeroSlideItem[] = [
     ctaLink: '/shop',
     secondaryCtaText: 'Explore Lookbook',
     secondaryCtaLink: '/look/wear-your-identity-aw26',
+    mediaType: 'image',
+    mediaUrl: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&q=80&w=1800',
     image: {
       url: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&q=80&w=1800',
       alt: 'Vantero Autumn Winter 2026 Editorial'
@@ -69,6 +73,8 @@ const DEFAULT_SLIDES: HeroSlideItem[] = [
     ctaLink: '/shop?category=clothing',
     secondaryCtaText: 'View Outerwear',
     secondaryCtaLink: '/shop?category=clothing',
+    mediaType: 'image',
+    mediaUrl: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&q=80&w=1800',
     image: {
       url: 'https://images.unsplash.com/photo-1594938298603-c8148c4dae35?auto=format&fit=crop&q=80&w=1800',
       alt: 'Tailored Luxury Menswear'
@@ -85,6 +91,8 @@ const DEFAULT_SLIDES: HeroSlideItem[] = [
     ctaLink: '/shop?category=sneakers',
     secondaryCtaText: 'Inspect Sizing',
     secondaryCtaLink: '/shop?category=sneakers',
+    mediaType: 'image',
+    mediaUrl: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&q=80&w=1800',
     image: {
       url: 'https://images.unsplash.com/photo-1549298916-b41d501d3772?auto=format&fit=crop&q=80&w=1800',
       alt: 'Handcrafted Luxury Sneakers'
@@ -101,6 +109,8 @@ const DEFAULT_SLIDES: HeroSlideItem[] = [
     ctaLink: '/shop?category=fragrance',
     secondaryCtaText: 'Olfactory Notes',
     secondaryCtaLink: '/shop?category=fragrance',
+    mediaType: 'image',
+    mediaUrl: 'https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&q=80&w=1800',
     image: {
       url: 'https://images.unsplash.com/photo-1523293182086-7651a899d37f?auto=format&fit=crop&q=80&w=1800',
       alt: 'Nocturne Artisanal Extrait de Parfum'
@@ -108,6 +118,18 @@ const DEFAULT_SLIDES: HeroSlideItem[] = [
     isActive: true
   }
 ];
+
+export const isSlideVideo = (slide?: HeroSlideItem): boolean => {
+  if (!slide) return false;
+  if (slide.mediaType === 'video') return true;
+  const url = slide.mediaUrl || slide.image?.url || '';
+  return /\.(mp4|webm|mov|ogg)$/i.test(url);
+};
+
+export const getSlideMediaUrl = (slide?: HeroSlideItem): string => {
+  if (!slide) return '';
+  return slide.mediaUrl || slide.image?.url || '';
+};
 
 export const Hero: React.FC<HeroProps> = ({ sectionData }) => {
   // Extract slides from contentData, filtering active ones
@@ -120,7 +142,6 @@ export const Hero: React.FC<HeroProps> = ({ sectionData }) => {
 
   // Enforce 3 to 5 slides rule on storefront: if fewer than 3, fallback / backfill
   if (activeSlides.length < 3) {
-    // Fill up to at least 3 slides using defaults
     const combined = [...activeSlides];
     for (const def of DEFAULT_SLIDES) {
       if (combined.length >= 3) break;
@@ -135,7 +156,7 @@ export const Hero: React.FC<HeroProps> = ({ sectionData }) => {
 
   const [currentIndex, setCurrentIndex] = useState(0);
   const [isPaused, setIsPaused] = useState(false);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const videoRefs = useRef<Record<number, HTMLVideoElement | null>>({});
 
   const totalSlides = activeSlides.length;
 
@@ -151,18 +172,50 @@ export const Hero: React.FC<HeroProps> = ({ sectionData }) => {
     setCurrentIndex(index);
   };
 
-  // Auto-advance timer (4 seconds), paused on hover
+  // Smart Slide Timing:
+  // - Images: display for exactly 3 seconds (3000ms), then auto-advance
+  // - Videos: play until video onEnded event before auto-advancing
   useEffect(() => {
     if (isPaused || totalSlides <= 1) return;
 
-    timerRef.current = setInterval(() => {
-      setCurrentIndex((prev) => (prev + 1) % totalSlides);
-    }, 4000); // ← changed from 5500 to 4000
+    const current = activeSlides[currentIndex];
+    const isVideo = isSlideVideo(current);
 
-    return () => {
-      if (timerRef.current) clearInterval(timerRef.current);
-    };
-  }, [isPaused, totalSlides, currentIndex]);
+    if (isVideo) {
+      // Ensure the video plays when slide becomes active
+      const vid = videoRefs.current[currentIndex];
+      if (vid) {
+        vid.currentTime = 0;
+        vid.play().catch(() => {});
+      }
+
+      // Safety timeout (60s) in case a video cannot fire onEnded
+      const safetyTimer = setTimeout(() => {
+        nextSlide();
+      }, 60000);
+
+      return () => clearTimeout(safetyTimer);
+    } else {
+      // Image slide: exactly 3 seconds
+      const timer = setTimeout(() => {
+        nextSlide();
+      }, 3000);
+
+      return () => clearTimeout(timer);
+    }
+  }, [currentIndex, isPaused, totalSlides, activeSlides]);
+
+  // Pause / Resume active video on hover
+  useEffect(() => {
+    const activeVid = videoRefs.current[currentIndex];
+    if (activeVid) {
+      if (isPaused) {
+        activeVid.pause();
+      } else {
+        activeVid.play().catch(() => {});
+      }
+    }
+  }, [isPaused, currentIndex]);
 
   const currentSlide = activeSlides[currentIndex] || activeSlides[0];
 
@@ -176,7 +229,9 @@ export const Hero: React.FC<HeroProps> = ({ sectionData }) => {
       {/* Background Slides with Smooth Crossfade */}
       {activeSlides.map((slide, idx) => {
         const isCurrent = idx === currentIndex;
-        const imageUrl = resolveImageUrl(slide.image?.url) || DEFAULT_SLIDES[0].image.url;
+        const isVideo = isSlideVideo(slide);
+        const rawUrl = getSlideMediaUrl(slide);
+        const resolvedUrl = resolveImageUrl(rawUrl) || DEFAULT_SLIDES[0].image?.url || '';
 
         return (
           <div
@@ -185,13 +240,39 @@ export const Hero: React.FC<HeroProps> = ({ sectionData }) => {
               isCurrent ? 'opacity-100 z-10' : 'opacity-0 z-0 pointer-events-none'
             }`}
           >
-            <img
-              src={imageUrl}
-              alt={slide.image?.alt || slide.title}
-              className={`w-full h-full object-cover object-center brightness-[0.90] transition-transform duration-[6000ms] ease-out ${
-                isCurrent ? 'scale-105' : 'scale-100'
-              }`}
-            />
+            {isVideo ? (
+              <video
+                ref={(el) => {
+                  videoRefs.current[idx] = el;
+                }}
+                src={resolvedUrl}
+                muted
+                playsInline
+                autoPlay={isCurrent}
+                loop={false}
+                onEnded={() => {
+                  if (isCurrent && !isPaused) {
+                    nextSlide();
+                  }
+                }}
+                onError={() => {
+                  if (isCurrent) {
+                    setTimeout(nextSlide, 3000);
+                  }
+                }}
+                className={`w-full h-full object-cover object-center brightness-[0.90] transition-transform duration-[6000ms] ease-out ${
+                  isCurrent ? 'scale-105' : 'scale-100'
+                }`}
+              />
+            ) : (
+              <img
+                src={resolvedUrl}
+                alt={slide.image?.alt || slide.title}
+                className={`w-full h-full object-cover object-center brightness-[0.90] transition-transform duration-[6000ms] ease-out ${
+                  isCurrent ? 'scale-105' : 'scale-100'
+                }`}
+              />
+            )}
             {/* Scrim Gradients matching Figma */}
             <div className="absolute inset-0 bg-gradient-to-t from-ink-900/95 via-ink-900/40 to-ink-900/50" />
             <div className="absolute inset-0 bg-gradient-to-r from-ink-900/80 via-transparent to-transparent hidden lg:block" />
@@ -267,7 +348,7 @@ export const Hero: React.FC<HeroProps> = ({ sectionData }) => {
         </button>
       </div>
 
-      {/* 2. Bottom Right — only Dots (numbers + play/pause removed) */}
+      {/* 2. Bottom Right — Dots Navigation */}
       <div className="absolute bottom-6 right-6 lg:right-12 z-30 flex items-center bg-ink-900/60 backdrop-blur-md px-4 py-2 rounded-full border border-white/15">
         <div className="flex items-center space-x-1.5">
           {activeSlides.map((_, dotIdx) => (

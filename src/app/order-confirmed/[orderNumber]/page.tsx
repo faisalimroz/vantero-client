@@ -1,12 +1,12 @@
 import React from 'react';
 import Link from 'next/link';
 import { notFound } from 'next/navigation';
-import { TopBar } from '@/components/storefront/TopBar';
 import { Navbar } from '@/components/storefront/Navbar';
 import { Footer } from '@/components/storefront/Footer';
 import { Button } from '@/components/ui/Button';
 import { formatBDT, formatDateTime, resolveImageUrl } from '@/lib/utils';
 import { CheckCircle2, Truck, ShieldCheck, MapPin, ArrowRight } from 'lucide-react';
+import { OrderInvoiceButton } from '@/components/invoice/OrderInvoiceButton';
 
 interface Props {
   params: { orderNumber: string };
@@ -31,8 +31,7 @@ export default async function OrderConfirmedPage({ params }: Props) {
   }
 
   return (
-    <div className="min-h-screen bg-paper flex flex-col">
-      <TopBar />
+    <div className="min-h-screen bg-paper flex flex-col mt-10">
       <Navbar transparentOnTop={false} />
 
       <main className="flex-1 max-w-3xl mx-auto px-4 sm:px-6 py-14 w-full text-center space-y-8">
@@ -65,12 +64,15 @@ export default async function OrderConfirmedPage({ params }: Props) {
               Follow every step of your parcel from packaging to doorstep delivery.
             </p>
           </div>
-          <Link href={`/account/orders/${order.orderNumber}`}>
-            <Button variant="primary" size="md" className="flex items-center space-x-1.5 whitespace-nowrap">
-              <span>Track Order Live</span>
-              <ArrowRight className="w-4 h-4 ml-1" />
-            </Button>
-          </Link>
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5 w-full sm:w-auto">
+            <OrderInvoiceButton order={order} variant="outline" size="md" />
+            <Link href={`/account/orders/${order.orderNumber}`} className="flex-1 sm:flex-none">
+              <Button variant="primary" size="md" className="w-full flex items-center justify-center space-x-1.5 whitespace-nowrap">
+                <span>Track Order Live</span>
+                <ArrowRight className="w-4 h-4 ml-1" />
+              </Button>
+            </Link>
+          </div>
         </div>
 
         {/* Order Details Card */}

@@ -2,12 +2,13 @@
 
 import React, { useEffect, useState } from 'react';
 import Link from 'next/link';
-import { TopBar } from '@/components/storefront/TopBar';
 import { Navbar } from '@/components/storefront/Navbar';
 import { Hero } from '@/components/storefront/Hero';
 import { TrustStrip } from '@/components/storefront/TrustStrip';
 import { CategoriesGrid } from '@/components/storefront/CategoriesGrid';
 import { ProductCard } from '@/components/storefront/ProductCard';
+import { DiscountProductsSection } from '@/components/storefront/DiscountProductsSection';
+import { FAQSection } from '@/components/storefront/FAQSection';
 import { ShopTheLookSection } from '@/components/storefront/ShopTheLookSection';
 import { Footer } from '@/components/storefront/Footer';
 import { Button } from '@/components/ui/Button';
@@ -29,7 +30,7 @@ async function getStorefrontData(): Promise<StorefrontData> {
     const [cmsRes, categoriesRes, productsRes, looksRes, reviewsRes] = await Promise.all([
       fetch(`${API_URL}/cms/sections`, { cache: 'no-store' }).catch(() => null),
       fetch(`${API_URL}/categories`, { cache: 'no-store' }).catch(() => null),
-      fetch(`${API_URL}/products?limit=8`, { cache: 'no-store' }).catch(() => null),
+      fetch(`${API_URL}/products?limit=24`, { cache: 'no-store' }).catch(() => null),
       fetch(`${API_URL}/shop-the-look`, { cache: 'no-store' }).catch(() => null),
       fetch(`${API_URL}/reviews`, { cache: 'no-store' }).catch(() => null),
     ]);
@@ -109,26 +110,19 @@ export default function HomePage() {
     secondaryCtaLink: '/look/wear-your-identity-aw26',
   };
 
-  const topBarText =
-    cms['top_bar']?.title ||
-    'Cash on delivery nationwide · Free delivery in Dhaka over ৳5,000 · 7-day free exchanges';
-
   const trustStripData = cms['trust_strip']?.contentData;
   const primaryLook = looks[0];
 
   return (
     <div className="min-h-screen bg-paper flex flex-col">
-      {/* Top Announcement Bar */}
-      {/* <TopBar text={topBarText} /> */}
-
       {/* Main Navbar */}
       <Navbar transparentOnTop={true} />
 
       {/* Hero Section */}
-   <main className="pt-[68px]">
-    <Hero sectionData={heroData} />
-    {/* other sections... */}
-  </main>
+      <main className="pt-[68px]">
+        <h1 className="sr-only">Handcrafted Italian Leather Sneakers & Menswear in Bangladesh</h1>
+        <Hero sectionData={heroData} />
+      </main>
 
       {/* Trust Strip */}
       <TrustStrip contentData={trustStripData} />
@@ -168,6 +162,9 @@ export default function HomePage() {
           </div>
         </div>
       </section>
+
+      {/* Discount / Special Offers Section */}
+      <DiscountProductsSection products={products} />
 
       {/* Shop the Look Section (Curated Ensemble Bundle) */}
       {primaryLook && <ShopTheLookSection look={primaryLook} />}
@@ -358,6 +355,9 @@ export default function HomePage() {
           </div>
         </section>
       )}
+
+      {/* Frequently Asked Questions Section */}
+      <FAQSection />
 
       {/* Global Storefront Footer */}
       <Footer footerData={cms['footer']} />

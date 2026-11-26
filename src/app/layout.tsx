@@ -14,30 +14,28 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'https://vanterobd.com'),
   title: {
     default: 'VANTERO | Modern Luxury Menswear, Footwear & Niche Fragrances',
     template: '%s | VANTERO',
   },
   description:
-    'Handcrafted Italian leather court sneakers, tailored wool overcoats, and artisanal niche extrait de parfum in Bangladesh. Cash on delivery nationwide with 7-day free exchanges.',
-  keywords: [
-    'Vantero',
-    'Luxury Menswear Bangladesh',
-    'Handmade Sneakers Dhaka',
-    'Wool Overcoat',
-    'Nocturne Extrait de Parfum',
-    'Cash on Delivery Dhaka',
-  ],
-  authors: [{ name: 'Vantero Ltd.' }],
+    'Handcrafted Italian leather sneakers, tailored menswear & niche extrait de parfum in Bangladesh. 100% Cash on delivery nationwide with 7-day doorstep exchanges.',
+  icons: {
+    icon: "/favicon.ico",
+  },
+  alternates: {
+    canonical: 'https://vanterobd.com',
+  },
+  authors: [{ name: 'Vantero Bangladesh Ltd.' }],
   openGraph: {
     type: 'website',
-    locale: 'en_US',
-    url: 'https://vantero.com',
+    locale: 'en_BD',
+    url: 'https://vanterobd.com',
     siteName: 'VANTERO',
     title: 'VANTERO | Wear Your Identity',
     description:
-      'Authentic sneakers, shoes, clothing and fragrance for men and boys. Cash on delivery nationwide, 7-day exchanges.',
+      'Handcrafted Italian leather sneakers, tailored menswear & niche extrait de parfum in Bangladesh. 100% Cash on delivery nationwide with 7-day doorstep exchanges.',
     images: [
       {
         url: 'https://images.unsplash.com/photo-1507679799987-c73779587ccf?auto=format&fit=crop&q=80&w=1200',

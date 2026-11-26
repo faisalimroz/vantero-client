@@ -28,10 +28,18 @@ import {
 interface MediaItem {
   _id?: string;
   url: string;
-  type: 'image' | 'video';
+  type: 'image' | 'video' | 'youtube';
   order?: number;
   publicId?: string;
+  youtubeId?: string;
 }
+
+const extractYouTubeVideoId = (url?: string): string => {
+  if (!url || typeof url !== 'string') return '';
+  const regExp = /(?:youtube\.com\/(?:[^\/]+\/.+\/|(?:v|e(?:mbed)?|shorts)\/|.*[?&]v=)|youtu\.be\/)([^"&?\/\s]{11})/;
+  const match = url.trim().match(regExp);
+  return match && match[1] ? match[1] : '';
+};
 
 interface ProductDetailClientProps {
   product: any;
@@ -75,11 +83,13 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
   const router = useRouter();
 
   /* =========================================================
-     1. MEDIA GALLERY STATE (MAX 5 PHOTOS & VIDEOS)
+     1. MEDIA GALLERY STATE (MAX 5 PHOTOS & VIDEOS + YOUTUBE)
      ========================================================= */
+  const ytVideoId = product.youtubeVideoId || extractYouTubeVideoId(product.youtubeUrl);
+
   const mediaItems: MediaItem[] = useMemo(() => {
-    const raw = (product.media && product.media.length > 0)
-      ? product.media
+    const raw: MediaItem[] = (product.media && product.media.length > 0)
+      ? [...product.media]
       : (product.images || []).map((img: any, idx: number) => ({
         url: typeof img === 'string' ? img : img.url,
         type: 'image' as const,
@@ -87,8 +97,17 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
         order: idx
       }));
 
+    if (ytVideoId && !raw.some((m) => m.type === 'youtube' || m.youtubeId === ytVideoId)) {
+      raw.push({
+        url: `https://www.youtube-nocookie.com/embed/${ytVideoId}`,
+        type: 'youtube',
+        youtubeId: ytVideoId,
+        order: raw.length
+      });
+    }
+
     if (raw.length > 0) {
-      return raw.slice(0, 5);
+      return raw.slice(0, 6);
     }
 
     return [{
@@ -96,7 +115,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
       type: 'image',
       order: 0
     }];
-  }, [product.media, product.images]);
+  }, [product.media, product.images, ytVideoId]);
 
   const [activeMediaIndex, setActiveMediaIndex] = useState(0);
 
@@ -270,7 +289,8 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
   };
 
   return (
-    <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 text-left">
+    <div className="space-y-12">
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 text-left mt-12">
       {/* =========================================================
           LEFT COLUMN: MULTI-IMAGE & VIDEO GALLERY
           ========================================================= */}
@@ -291,7 +311,20 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                         : 'border border-line opacity-75 hover:opacity-100 hover:border-ink-400'
                       }`}
                   >
-                    {item.type === 'video' ? (
+                    {item.type === 'youtube' ? (
+                      <div className="w-full h-full relative bg-black flex items-center justify-center">
+                        <img
+                          src={`https://img.youtube.com/vi/${item.youtubeId}/hqdefault.jpg`}
+                          alt="YouTube video thumbnail"
+                          className="w-full h-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                          <div className="w-6 h-6 rounded-full bg-red-600 flex items-center justify-center text-white shadow-xs">
+                            <Play className="w-3 h-3 fill-current translate-x-0.5" />
+                          </div>
+                        </div>
+                      </div>
+                    ) : item.type === 'video' ? (
                       <div className="w-full h-full relative bg-black flex items-center justify-center">
                         <video
                           src={resolveImageUrl(item.url)}
@@ -320,7 +353,16 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
 
           {/* Main Media Stage (Right Side on Desktop / Top on Mobile) */}
           <div className="relative flex-1 aspect-[4/5] bg-stone-100 rounded-sm overflow-hidden border border-line flex items-center justify-center">
-            {currentMedia.type === 'video' ? (
+            {currentMedia.type === 'youtube' ? (
+              <iframe
+                key={currentMedia.youtubeId}
+                src={`https://www.youtube-nocookie.com/embed/${currentMedia.youtubeId}?autoplay=1&rel=0`}
+                title={`${product.title} YouTube Video`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="w-full h-full border-0"
+              />
+            ) : currentMedia.type === 'video' ? (
               <video
                 key={currentMedia.url}
                 src={resolveImageUrl(currentMedia.url)}
@@ -394,7 +436,20 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                       : 'border border-line opacity-75 hover:opacity-100'
                     }`}
                 >
-                  {item.type === 'video' ? (
+                  {item.type === 'youtube' ? (
+                    <div className="w-full h-full relative bg-black flex items-center justify-center">
+                      <img
+                        src={`https://img.youtube.com/vi/${item.youtubeId}/hqdefault.jpg`}
+                        alt="YouTube thumbnail"
+                        className="w-full h-full object-cover"
+                      />
+                      <div className="absolute inset-0 bg-black/40 flex items-center justify-center">
+                        <div className="w-5 h-5 rounded-full bg-red-600 flex items-center justify-center text-white">
+                          <Play className="w-2.5 h-2.5 fill-current translate-x-0.5" />
+                        </div>
+                      </div>
+                    </div>
+                  ) : item.type === 'video' ? (
                     <div className="w-full h-full relative bg-black flex items-center justify-center">
                       <video
                         src={resolveImageUrl(item.url)}
@@ -474,7 +529,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                 Color:
                 <span className="font-semibold text-ink-800 normal-case">{selectedColor}</span>
               </span>
-              <span className="text-ink-400 font-mono text-[11px]">
+              <span className="text-black font-bold text-[12px]">
                 {availableColors.length} color{availableColors.length === 1 ? '' : 's'} available
               </span>
             </div>
@@ -513,7 +568,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
               <span className="font-bold uppercase tracking-wider text-ink-900">
                 Select Size:
               </span>
-              <span className="text-ink-500 font-mono text-[11px]">
+              <span className="text-black font-bold text-[12px]">
                 {currentVariant?.stock > 0
                   ? `${currentVariant.stock} item(s) in stock`
                   : 'Out of Stock'}
@@ -658,25 +713,55 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
               onClick={() => toggleAccordion('shipping')}
               className="w-full p-4 bg-paper flex items-center justify-between text-xs font-bold uppercase tracking-wider text-ink-900 text-left hover:bg-cream transition-colors"
             >
-              <span>Delivery & Free Exchanges</span>
+              <span>Delivery</span>
               {openAccordion === 'shipping' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
             </button>
             {openAccordion === 'shipping' && (
               <div className="p-4 bg-white border-t border-line text-xs text-ink-700 space-y-2">
                 <p>
-                  <strong>Dhaka Delivery:</strong> Next-day courier dispatch. Free for orders above ৳5,000 (standard fee ৳80).
+                  <strong>Dhaka Delivery:</strong> Next-day courier dispatch.
                 </p>
                 <p>
-                  <strong>Outside Dhaka:</strong> 48 to 72 hours standard courier nationwide (flat fee ৳150).
+                  <strong>Outside Dhaka:</strong> 48 to 72 hours standard courier nationwide.
                 </p>
-                <p>
+                {/* <p>
                   <strong>7-Day Free Exchanges:</strong> If your size is not perfect, our courier collects the unworn item directly from your address and exchanges it free of charge.
-                </p>
+                </p> */}
               </div>
             )}
           </div>
         </div>
       </div>
+      </div>
+
+      {/* DEDICATED PRODUCT MOTION & VIDEO SHOWCASE SECTION */}
+      {ytVideoId && (
+        <section className="pt-12 border-t border-line text-left">
+          <div className="max-w-4xl mx-auto space-y-4">
+            <div className="space-y-1">
+              <span className="text-[10px] font-mono tracking-widest uppercase text-gold-600 font-bold">
+                Product In Motion
+              </span>
+              <h3 className="text-xl sm:text-2xl font-bold tracking-tight text-ink-900">
+                Video Showcase & Silhouette Fit
+              </h3>
+              <p className="text-xs text-ink-600 leading-relaxed">
+                Watch official styling, fabric drape, and detailing without leaving this page.
+              </p>
+            </div>
+
+            <div className="relative aspect-video w-full rounded-sm overflow-hidden border border-line bg-black shadow-lg">
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${ytVideoId}?rel=0`}
+                title={`${product.title} Motion Showcase`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="w-full h-full border-0"
+              />
+            </div>
+          </div>
+        </section>
+      )}
     </div>
   );
 }
