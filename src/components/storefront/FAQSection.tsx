@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { getPublicFAQs } from '@/lib/api';
 import { ChevronDown, HelpCircle, ShieldCheck, Truck, RefreshCw } from 'lucide-react';
 
@@ -8,25 +8,63 @@ interface Props {
   initialFaqs?: any[];
 }
 
-export const FAQSection: React.FC<Props> = ({ initialFaqs = [] }) => {
-  const [faqs, setFaqs] = useState<any[]>(initialFaqs);
+// Module-level in-memory cache to prevent duplicate network calls across remounts
+let cachedFaqs: any[] | null = null;
+let fetchFaqsPromise: Promise<any[]> | null = null;
+
+export const FAQSection: React.FC<Props> = ({ initialFaqs }) => {
+  const [faqs, setFaqs] = useState<any[]>(initialFaqs || cachedFaqs || []);
   const [openIndex, setOpenIndex] = useState<number | null>(0);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [loading, setLoading] = useState(false);
+  const hasFetchedRef = useRef(false);
 
+  // Sync if initialFaqs is provided or updated by parent
   useEffect(() => {
-    if (initialFaqs.length === 0) {
-      setLoading(true);
-      getPublicFAQs()
-        .then((res) => {
-          if (res?.success) {
-            setFaqs(res.faqs || []);
-          }
-        })
-        .catch(() => {})
-        .finally(() => setLoading(false));
+    if (initialFaqs && initialFaqs.length > 0) {
+      setFaqs(initialFaqs);
+      cachedFaqs = initialFaqs;
     }
   }, [initialFaqs]);
+
+  // Fetch only once on initial mount if initialFaqs were not provided
+  useEffect(() => {
+    // If initialFaqs already provided or cached, no need to fetch
+    if ((initialFaqs && initialFaqs.length > 0) || cachedFaqs) {
+      if (cachedFaqs && (!initialFaqs || initialFaqs.length === 0)) {
+        setFaqs(cachedFaqs);
+      }
+      return;
+    }
+
+    if (hasFetchedRef.current) return;
+    hasFetchedRef.current = true;
+
+    setLoading(true);
+
+    if (!fetchFaqsPromise) {
+      fetchFaqsPromise = getPublicFAQs()
+        .then((res) => {
+          if (res?.success && Array.isArray(res.faqs)) {
+            cachedFaqs = res.faqs;
+            return res.faqs;
+          }
+          return [];
+        })
+        .catch(() => [])
+        .finally(() => {
+          fetchFaqsPromise = null;
+        });
+    }
+
+    fetchFaqsPromise
+      .then((data) => {
+        setFaqs(data || []);
+      })
+      .finally(() => {
+        setLoading(false);
+      });
+  }, []); // Run strictly once on mount
 
   const categories = ['all', ...Array.from(new Set(faqs.map((f) => f.category || 'General')))];
 

@@ -143,7 +143,7 @@ export default async function OrderConfirmedPage({ params }: Props) {
               </span>
             </div>
             <div className="pt-2 border-t border-line flex justify-between text-base font-bold text-ink-900">
-              <span>Total Payable in Cash</span>
+              <span>Total</span>
               <span className="font-mono text-lg">{formatBDT(order.totalAmount)}</span>
             </div>
           </div>

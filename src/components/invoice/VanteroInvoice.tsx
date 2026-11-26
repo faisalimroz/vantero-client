@@ -16,7 +16,7 @@ export function VanteroInvoice({ order, onClose }: InvoiceProps) {
 
   if (!order) return null;
 
-  const handleDownloadPDF = async () => {
+ const handleDownloadPDF = async () => {
     if (!invoiceRef.current || downloading) return;
     setDownloading(true);
 
@@ -29,36 +29,54 @@ export function VanteroInvoice({ order, onClose }: InvoiceProps) {
       const element = invoiceRef.current;
 
       const canvas = await html2canvas(element, {
-        scale: 2,
+        scale: 1.5,
         useCORS: true,
         backgroundColor: '#ffffff',
         logging: false,
-        windowWidth: 900,
+        windowWidth: 800,
       });
 
-      const imgData = canvas.toDataURL('image/png');
+      // JPEG at 0.85 quality cuts size from ~7MB to ~150-250KB with sharp text
+      const imgData = canvas.toDataURL('image/jpeg', 0.85);
       const pdf = new jsPDF({
         orientation: 'portrait',
         unit: 'mm',
         format: 'a4',
+        compress: true,
       });
 
       const pdfWidth = pdf.internal.pageSize.getWidth();
       const pdfHeight = pdf.internal.pageSize.getHeight();
-      const imgWidth = pdfWidth;
-      const imgHeight = (canvas.height * imgWidth) / canvas.width;
+      const margin = 6;
+      const maxWidth = pdfWidth - margin * 2;
+      const maxHeight = pdfHeight - margin * 2;
 
-      let heightLeft = imgHeight;
-      let position = 0;
+      let imgWidth = maxWidth;
+      let imgHeight = (canvas.height * imgWidth) / canvas.width;
 
-      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-      heightLeft -= pdfHeight;
+      // Fit cleanly onto a single A4 page if it fits within ~1.25x page height
+      if (imgHeight <= maxHeight * 1.25) {
+        if (imgHeight > maxHeight) {
+          const ratio = maxHeight / imgHeight;
+          imgHeight = maxHeight;
+          imgWidth = imgWidth * ratio;
+        }
+        const xOffset = (pdfWidth - imgWidth) / 2;
+        pdf.addImage(imgData, 'JPEG', xOffset, margin, imgWidth, imgHeight, undefined, 'FAST');
+      } else {
+        // Multi-page fallback for very long itemized orders
+        let heightLeft = imgHeight;
+        let position = margin;
 
-      while (heightLeft > 0) {
-        position = heightLeft - imgHeight;
-        pdf.addPage();
-        pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight);
-        heightLeft -= pdfHeight;
+        pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight, undefined, 'FAST');
+        heightLeft -= maxHeight;
+
+        while (heightLeft > 0) {
+          position = heightLeft - imgHeight + margin;
+          pdf.addPage();
+          pdf.addImage(imgData, 'JPEG', margin, position, imgWidth, imgHeight, undefined, 'FAST');
+          heightLeft -= maxHeight;
+        }
       }
 
       pdf.save(`Vantero-Invoice-${order.orderNumber || 'Order'}.pdf`);
@@ -178,7 +196,7 @@ export function VanteroInvoice({ order, onClose }: InvoiceProps) {
                   {order.shippingAddress?.recipientName}
                 </p>
                 <p className="text-[11px] font-mono text-ink-700 mt-0.5 flex items-center gap-1">
-                 Phone No: {order.shippingAddress?.phone}
+                 Phone: {order.shippingAddress?.phone}
                 </p>
                 <p className="text-[11px] font-monotext-ink-700 mt-1 flex items-start gap-1">
                 Address:

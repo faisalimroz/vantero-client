@@ -35,6 +35,7 @@ export default function CheckoutPage() {
 
   const [recipientName, setRecipientName] = useState('');
   const [phone, setPhone] = useState('');
+  const [email, setEmail] = useState('');
   const [streetAddress, setStreetAddress] = useState('');
   const [city, setCity] = useState('');
   const [district, setDistrict] = useState('Dhaka');
@@ -72,6 +73,7 @@ export default function CheckoutPage() {
         const defaultAddr = user.savedAddresses.find((a) => a.isDefault) || user.savedAddresses[0];
         setRecipientName(defaultAddr.recipientName || user.name || '');
         setPhone(defaultAddr.phone || user.phone || '');
+        setEmail(user.email || '');
         setStreetAddress(defaultAddr.streetAddress || '');
         setCity(defaultAddr.city || '');
         const dist = defaultAddr.district || 'Dhaka';
@@ -81,6 +83,7 @@ export default function CheckoutPage() {
       } else {
         setRecipientName(user.name || '');
         setPhone(user.phone || '');
+        setEmail(user.email || '');
       }
     }
   }, [user]);
@@ -95,38 +98,6 @@ export default function CheckoutPage() {
     deliveryFee = 0;
   }
   const totalAmount = subtotal + deliveryFee;
-
-  // Protect route: If guest, trigger modal
-  if (!authLoading && !user) {
-    return (
-      <div className="min-h-screen bg-paper flex flex-col">
-        <Navbar transparentOnTop={false} />
-        <main className="flex-1 max-w-lg mx-auto px-4 py-20 flex flex-col items-center justify-center text-center">
-          <div className="w-16 h-16 bg-cream rounded-full flex items-center justify-center text-ink-900 mb-4 border border-line">
-            <Lock className="w-7 h-7 text-gold-500" />
-          </div>
-          <h1 className="text-2xl font-bold tracking-tight text-ink-900">
-            Mandatory Sign-In Required
-          </h1>
-          <p className="text-xs text-ink-600 mt-2 max-w-sm">
-            To place a Cash on Delivery order and receive live dispatch updates, please sign in to your account.
-          </p>
-          <Button
-            variant="primary"
-            size="lg"
-            className="mt-6 w-full max-w-xs"
-            onClick={() => openAuthModal('/checkout')}
-          >
-            Sign In with Google
-          </Button>
-          <p className="text-[11px] text-ink-400 mt-3">
-            Your cart items have been securely preserved in this browser.
-          </p>
-        </main>
-        <Footer />
-      </div>
-    );
-  }
 
   const handleSubmitOrder = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -157,6 +128,7 @@ export default function CheckoutPage() {
         shippingAddress: {
           recipientName: recipientName.trim(),
           phone: phone.trim(),
+          email: email.trim(),
           streetAddress: streetAddress.trim(),
           city: city.trim(),
           district: district.trim(),
@@ -188,9 +160,24 @@ export default function CheckoutPage() {
           <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-ink-900">
             Cash on Delivery Checkout
           </h1>
-          <p className="text-xs text-ink-500 mt-1">
-            Logged in as <strong>{user?.name}</strong> ({user?.phone || user?.email})
-          </p>
+          {user ? (
+            <p className="text-xs text-ink-500 mt-1">
+              Logged in as <strong>{user.name}</strong> ({user.phone || user.email})
+            </p>
+          ) : (
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mt-1">
+              <p className="text-xs text-ink-500">
+                Checking out as Guest · 100% Cash on Delivery nationwide
+              </p>
+              <button
+                type="button"
+                onClick={() => openAuthModal('/checkout')}
+                className="text-xs text-gold-600 hover:text-gold-700 font-semibold underline text-left"
+              >
+                Already have an account? Sign in
+              </button>
+            </div>
+          )}
         </div>
 
         {error && (
@@ -223,6 +210,16 @@ export default function CheckoutPage() {
                   value={phone}
                   onChange={(e) => setPhone(e.target.value)}
                   required
+                />
+              </div>
+
+              <div>
+                <Input
+                  label="Email Address (Optional — For Order Receipt)"
+                  type="email"
+                  placeholder="e.g. tanzim@example.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                 />
               </div>
 

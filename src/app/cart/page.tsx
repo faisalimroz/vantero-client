@@ -3,7 +3,6 @@
 import React from 'react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
-import { useAuth } from '@/context/AuthContext';
 import { Navbar } from '@/components/storefront/Navbar';
 import { Footer } from '@/components/storefront/Footer';
 import { Button } from '@/components/ui/Button';
@@ -13,7 +12,6 @@ import { useRouter } from 'next/navigation';
 
 export default function CartPage() {
   const { cart, removeFromCart, updateQuantity, subtotal, itemsCount, clearCart } = useCart();
-  const { user, openAuthModal } = useAuth();
   const router = useRouter();
 
   const freeThreshold = 5000;
@@ -21,11 +19,7 @@ export default function CartPage() {
   const percent = Math.min(100, Math.round((subtotal / freeThreshold) * 100));
 
   const handleCheckout = () => {
-    if (!user) {
-      openAuthModal('/checkout');
-    } else {
-      router.push('/checkout');
-    }
+    router.push('/checkout');
   };
 
   return (
@@ -173,7 +167,7 @@ export default function CartPage() {
 
               <div className="flex items-center justify-center space-x-1.5 text-[11px] text-ink-500 text-center pt-2">
                 <ShieldCheck className="w-3.5 h-3.5 text-gold-500" />
-                <span>Login required before order placement</span>
+                <span>Strictly Cash on Delivery · Inspect at doorstep</span>
               </div>
             </div>
           </div>

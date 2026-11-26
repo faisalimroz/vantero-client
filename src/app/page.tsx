@@ -21,18 +21,20 @@ interface StorefrontData {
   products: any[];
   looks: any[];
   reviews: any[];
+  faqs: any[];
 }
 
 async function getStorefrontData(): Promise<StorefrontData> {
   const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
   try {
-    const [cmsRes, categoriesRes, productsRes, looksRes, reviewsRes] = await Promise.all([
+    const [cmsRes, categoriesRes, productsRes, looksRes, reviewsRes, faqsRes] = await Promise.all([
       fetch(`${API_URL}/cms/sections`, { cache: 'no-store' }).catch(() => null),
       fetch(`${API_URL}/categories`, { cache: 'no-store' }).catch(() => null),
       fetch(`${API_URL}/products?limit=24`, { cache: 'no-store' }).catch(() => null),
       fetch(`${API_URL}/shop-the-look`, { cache: 'no-store' }).catch(() => null),
       fetch(`${API_URL}/reviews`, { cache: 'no-store' }).catch(() => null),
+      fetch(`${API_URL}/faqs`, { cache: 'no-store' }).catch(() => null),
     ]);
 
     const cmsData = cmsRes?.ok ? await cmsRes.json() : { sectionMap: {} };
@@ -40,6 +42,7 @@ async function getStorefrontData(): Promise<StorefrontData> {
     const productsData = productsRes?.ok ? await productsRes.json() : { products: [] };
     const looksData = looksRes?.ok ? await looksRes.json() : { looks: [] };
     const reviewsData = reviewsRes?.ok ? await reviewsRes.json() : { reviews: [] };
+    const faqsData = faqsRes?.ok ? await faqsRes.json() : { faqs: [] };
 
     return {
       cms: cmsData?.sectionMap || {},
@@ -47,10 +50,11 @@ async function getStorefrontData(): Promise<StorefrontData> {
       products: productsData?.products || [],
       looks: looksData?.looks || [],
       reviews: reviewsData?.reviews || [],
+      faqs: faqsData?.faqs || [],
     };
   } catch (error) {
     console.error('Error fetching storefront data:', error);
-    return { cms: {}, categories: [], products: [], looks: [], reviews: [] };
+    return { cms: {}, categories: [], products: [], looks: [], reviews: [], faqs: [] };
   }
 }
 
@@ -61,6 +65,7 @@ export default function HomePage() {
     products: [],
     looks: [],
     reviews: [],
+    faqs: [],
   });
   const [reviewIndex, setReviewIndex] = useState(0);
 
@@ -77,7 +82,7 @@ export default function HomePage() {
     };
   }, []);
 
-  const { cms, categories, products, looks, reviews } = storefront;
+  const { cms, categories, products, looks, reviews, faqs } = storefront;
 
   const visibleReviewCount = 3;
   const canSlideReviews = reviews.length > visibleReviewCount;
@@ -357,7 +362,7 @@ export default function HomePage() {
       )}
 
       {/* Frequently Asked Questions Section */}
-      <FAQSection />
+      <FAQSection initialFaqs={faqs} />
 
       {/* Global Storefront Footer */}
       <Footer footerData={cms['footer']} />

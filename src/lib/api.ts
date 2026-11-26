@@ -80,6 +80,7 @@ export const createOrder = async (orderData: {
   shippingAddress: {
     recipientName: string;
     phone: string;
+    email?: string;
     streetAddress: string;
     city: string;
     district: string;

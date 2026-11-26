@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useCart } from '@/context/CartContext';
-import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { formatBDT, resolveImageUrl } from '@/lib/utils';
 import { getSiteSettings } from '@/lib/api';
@@ -12,7 +11,6 @@ import { useRouter } from 'next/navigation';
 
 export const BagDrawer: React.FC = () => {
   const { cart, isCartOpen, closeCart, removeFromCart, updateQuantity, subtotal, itemsCount } = useCart();
-  const { user, openAuthModal } = useAuth();
   const router = useRouter();
 
   const [freeDeliveryThreshold, setFreeDeliveryThreshold] = useState<number | null>(null);
@@ -45,12 +43,7 @@ export const BagDrawer: React.FC = () => {
 
   const handleCheckoutClick = () => {
     closeCart();
-    if (!user) {
-      // Mandatory login: Open auth modal with redirect target to checkout
-      openAuthModal('/checkout');
-    } else {
-      router.push('/checkout');
-    }
+    router.push('/checkout');
   };
 
   return (

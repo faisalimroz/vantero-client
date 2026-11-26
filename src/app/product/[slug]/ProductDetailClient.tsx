@@ -6,7 +6,6 @@ import { formatBDT, resolveImageUrl } from '@/lib/utils';
 import { Button } from '@/components/ui/Button';
 import { Badge } from '@/components/ui/Badge';
 import { useCart } from '@/context/CartContext';
-import { useAuth } from '@/context/AuthContext';
 import { useRouter } from 'next/navigation';
 import {
   ShoppingBag,
@@ -79,7 +78,6 @@ const getColorHex = (colorName: string): string => {
 
 export default function ProductDetailClient({ product }: ProductDetailClientProps) {
   const { addToCart, openCart } = useCart();
-  const { user, openAuthModal } = useAuth();
   const router = useRouter();
 
   /* =========================================================
@@ -281,11 +279,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
 
   const handleBuyNow = () => {
     handleAddToCart();
-    if (!user) {
-      openAuthModal('/checkout');
-    } else {
-      router.push('/checkout');
-    }
+    router.push('/checkout');
   };
 
   return (
