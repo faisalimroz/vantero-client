@@ -81,11 +81,11 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
     const raw = (product.media && product.media.length > 0)
       ? product.media
       : (product.images || []).map((img: any, idx: number) => ({
-          url: typeof img === 'string' ? img : img.url,
-          type: 'image' as const,
-          publicId: img.publicId || '',
-          order: idx
-        }));
+        url: typeof img === 'string' ? img : img.url,
+        type: 'image' as const,
+        publicId: img.publicId || '',
+        order: idx
+      }));
 
     if (raw.length > 0) {
       return raw.slice(0, 5);
@@ -286,11 +286,10 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                     key={item._id || idx}
                     type="button"
                     onClick={() => setActiveMediaIndex(idx)}
-                    className={`relative w-full aspect-[3/4] rounded-sm overflow-hidden transition-all text-left group ${
-                      isActive
+                    className={`relative w-full aspect-[3/4] rounded-sm overflow-hidden transition-all text-left group ${isActive
                         ? 'border-2 border-ink-900 shadow-sm ring-1 ring-ink-900/15 scale-[1.02]'
                         : 'border border-line opacity-75 hover:opacity-100 hover:border-ink-400'
-                    }`}
+                      }`}
                   >
                     {item.type === 'video' ? (
                       <div className="w-full h-full relative bg-black flex items-center justify-center">
@@ -390,11 +389,10 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                   key={item._id || idx}
                   type="button"
                   onClick={() => setActiveMediaIndex(idx)}
-                  className={`relative w-16 h-20 rounded-sm overflow-hidden flex-shrink-0 transition-all text-left ${
-                    isActive
+                  className={`relative w-16 h-20 rounded-sm overflow-hidden flex-shrink-0 transition-all text-left ${isActive
                       ? 'border-2 border-ink-900 shadow-sm'
                       : 'border border-line opacity-75 hover:opacity-100'
-                  }`}
+                    }`}
                 >
                   {item.type === 'video' ? (
                     <div className="w-full h-full relative bg-black flex items-center justify-center">
@@ -491,11 +489,10 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                     key={colorName}
                     type="button"
                     onClick={() => handleColorChange(colorName)}
-                    className={`flex items-center space-x-2 px-3 py-1.5 rounded-sm border text-xs transition-all ${
-                      isSelected
+                    className={`flex items-center space-x-2 px-3 py-1.5 rounded-sm border text-xs transition-all ${isSelected
                         ? 'border-ink-900 ring-2 ring-ink-900/10 font-bold bg-white text-ink-900 shadow-xs'
                         : 'border-line hover:border-ink-500 bg-white text-ink-700'
-                    }`}
+                      }`}
                   >
                     <span
                       className="w-3.5 h-3.5 rounded-full border border-black/15 shrink-0 shadow-2xs"
@@ -533,13 +530,12 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
                     key={v.size}
                     disabled={isOut}
                     onClick={() => setSelectedSize(v.size)}
-                    className={`min-w-[56px] px-3.5 py-2 text-xs font-mono font-medium rounded-sm border transition-all ${
-                      isSelected
+                    className={`min-w-[56px] px-3.5 py-2 text-xs font-mono font-medium rounded-sm border transition-all ${isSelected
                         ? 'bg-ink-900 text-white border-ink-900 shadow-sm'
                         : isOut
-                        ? 'bg-stone/50 border-line text-ink-300 line-through cursor-not-allowed'
-                        : 'bg-white border-line text-ink-900 hover:border-ink-600'
-                    }`}
+                          ? 'bg-stone/50 border-line text-ink-300 line-through cursor-not-allowed'
+                          : 'bg-white border-line text-ink-900 hover:border-ink-600'
+                      }`}
                   >
                     {v.size}
                   </button>
@@ -573,7 +569,27 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
             </button>
           </div>
         </div>
-
+           <div className="border border-line rounded-sm overflow-hidden">
+            <button
+              onClick={() => toggleAccordion('details')}
+              className="w-full p-4 bg-paper flex items-center justify-between text-xs font-bold uppercase tracking-wider text-ink-900 text-left hover:bg-cream transition-colors"
+            >
+              <span>Product Details & Craft</span>
+              {openAccordion === 'details' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+            </button>
+            {openAccordion === 'details' && (
+              <div className="p-4 bg-white border-t border-line text-xs text-ink-700 space-y-2">
+                <p className="leading-relaxed">{product.description}</p>
+                {product.details && product.details.length > 0 && (
+                  <ul className="list-disc pl-4 space-y-1 pt-1 text-ink-600">
+                    {product.details.map((d: string, i: number) => (
+                      <li key={i}>{d}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
+          </div>
         {/* Action CTAs */}
         <div className="space-y-2.5 pt-3">
           <Button
@@ -634,27 +650,7 @@ export default function ProductDetailClient({ product }: ProductDetailClientProp
         {/* Accordions */}
         <div className="pt-6 border-t border-line space-y-2">
           {/* Details */}
-          <div className="border border-line rounded-sm overflow-hidden">
-            <button
-              onClick={() => toggleAccordion('details')}
-              className="w-full p-4 bg-paper flex items-center justify-between text-xs font-bold uppercase tracking-wider text-ink-900 text-left hover:bg-cream transition-colors"
-            >
-              <span>Product Details & Craft</span>
-              {openAccordion === 'details' ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
-            </button>
-            {openAccordion === 'details' && (
-              <div className="p-4 bg-white border-t border-line text-xs text-ink-700 space-y-2">
-                <p className="leading-relaxed">{product.description}</p>
-                {product.details && product.details.length > 0 && (
-                  <ul className="list-disc pl-4 space-y-1 pt-1 text-ink-600">
-                    {product.details.map((d: string, i: number) => (
-                      <li key={i}>{d}</li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
-          </div>
+        
 
           {/* Delivery & Exchanges */}
           <div className="border border-line rounded-sm overflow-hidden">

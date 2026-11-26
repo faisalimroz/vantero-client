@@ -46,28 +46,35 @@ export const ShopTheLookSection: React.FC<ShopTheLookSectionProps> = ({ look }) 
   const [selectedSizes, setSelectedSizes] = useState<Record<string, string>>({});
   const [addedAll, setAddedAll] = useState(false);
 
-  if (!look || !look.products || look.products.length === 0) return null;
+  // Filter out any unpopulated, deleted, or null products
+  const validProducts = (look?.products || []).filter(
+    (lp): lp is LinkedProduct => Boolean(lp && lp.product && typeof lp.product === 'object' && lp.product._id)
+  );
+
+  if (!look || validProducts.length === 0) return null;
 
   const handleSizeChange = (productId: string, size: string) => {
     setSelectedSizes((prev) => ({ ...prev, [productId]: size }));
   };
 
   const handleAddSingleItem = (lp: LinkedProduct) => {
-    const prod = lp.product;
+    const prod = lp?.product;
+    if (!prod || !prod._id) return;
+
     const size =
       selectedSizes[prod._id] ||
       prod.variants?.find((v) => v.stock > 0)?.size ||
       'One Size';
 
-    const price = prod.priceCalculation?.finalPrice ?? prod.basePrice;
+    const price = prod.priceCalculation?.finalPrice ?? prod.basePrice ?? 0;
 
     addToCart({
       productId: prod._id,
-      title: prod.title,
-      slug: prod.slug,
+      title: prod.title || 'Curated Piece',
+      slug: prod.slug || '',
       image: prod.images?.[0]?.url || '',
       price,
-      originalPrice: prod.basePrice,
+      originalPrice: prod.basePrice ?? price,
       size,
       color: prod.variants?.find((v) => v.size === size)?.color || prod.variants?.[0]?.color || '',
       quantity: 1,
@@ -75,14 +82,14 @@ export const ShopTheLookSection: React.FC<ShopTheLookSectionProps> = ({ look }) 
   };
 
   const handleAddAllToBag = () => {
-    look.products?.forEach((lp) => {
+    validProducts.forEach((lp) => {
       handleAddSingleItem(lp);
     });
     setAddedAll(true);
     setTimeout(() => setAddedAll(false), 2500);
   };
 
-  const totalBundlePrice = look.products.reduce((acc, lp) => {
+  const totalBundlePrice = validProducts.reduce((acc, lp) => {
     const p = lp.product;
     return acc + (p?.priceCalculation?.finalPrice ?? p?.basePrice ?? 0);
   }, 0);
@@ -146,12 +153,13 @@ export const ShopTheLookSection: React.FC<ShopTheLookSectionProps> = ({ look }) 
             <div className="absolute inset-0 bg-gradient-to-t from-ink-900/60 via-transparent to-transparent" />
 
             {/* Hotspots */}
-            {look.products.map((lp, idx) => {
+            {validProducts.map((lp, idx) => {
               const top = lp.hotspot?.top ?? 30 + idx * 20;
               const left = lp.hotspot?.left ?? 40 + (idx % 2) * 15;
+              const title = lp.product?.title || lp.customNote || 'Curated Piece';
               return (
                 <div
-                  key={lp._id || idx}
+                  key={lp._id || lp.product?._id || idx}
                   className="absolute z-10 group"
                   style={{ top: `${top}%`, left: `${left}%` }}
                 >
@@ -159,20 +167,20 @@ export const ShopTheLookSection: React.FC<ShopTheLookSectionProps> = ({ look }) 
                     {idx + 1}
                   </button>
                   <div className="absolute left-8 top-1/2 -translate-y-1/2 bg-paper/95 border border-line rounded-sm px-2.5 py-1 text-[11px] font-medium text-ink-900 shadow-xl whitespace-nowrap opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none">
-                    {lp.product.title}
+                    {title}
                   </div>
                 </div>
               );
             })}
 
             <div className="absolute bottom-4 left-4 right-4 text-white text-xs">
-              <span className="font-semibold">{look.products.length} Curated Pieces</span> in this look
+              <span className="font-semibold">{validProducts.length} Curated Pieces</span> in this look
             </div>
           </div>
 
           {/* Linked Products List & Size Pickers */}
           <div className="lg:col-span-7 space-y-4 text-left">
-            {look.products.map((lp, idx) => {
+            {validProducts.map((lp, idx) => {
               const p = lp.product;
               if (!p) return null;
               const price = p.priceCalculation?.finalPrice ?? p.basePrice;

@@ -125,7 +125,10 @@ export default function HomePage() {
       <Navbar transparentOnTop={true} />
 
       {/* Hero Section */}
-      <Hero sectionData={heroData} />
+   <main className="pt-[68px]">
+    <Hero sectionData={heroData} />
+    {/* other sections... */}
+  </main>
 
       {/* Trust Strip */}
       <TrustStrip contentData={trustStripData} />
